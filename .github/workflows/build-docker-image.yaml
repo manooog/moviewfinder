@@ -21,7 +21,9 @@ jobs:
         uses: actions/checkout@v3
       - 
         name: Install dependencies
-        run: pnpm i
+        run: |
+          curl -f https://get.pnpm.io/v6.16.js | node - add --global pnpm
+          pnpm i
         env:
           PUPPETEER_SKIP_DOWNLOAD: true
       -
