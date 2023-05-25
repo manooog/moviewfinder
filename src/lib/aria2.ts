@@ -1,7 +1,9 @@
 import fetch from "node-fetch"
 import { v4 } from "uuid"
-import config from "../../config/config.json"
 import { logger as log } from "./log"
+import getConfig from "./config"
+
+const config = getConfig()
 
 /**
  * 下载

@@ -5,3 +5,5 @@ export type MovieMeta = {
 
   createTime?: Dayjs
 }
+
+export type Config = any

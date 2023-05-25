@@ -51,4 +51,4 @@ COPY --chown=node:node pnpm-lock.yaml package.json ./
 COPY --from=build --chown=node:node /app/out/ ./
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 
-CMD ["node", "src/index.js"]
+CMD ["node", "index.js"]

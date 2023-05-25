@@ -2,18 +2,18 @@
  * 电影天堂自动脚本
  */
 
-// import { Cluster } from "puppeteer-cluster"
-import config from "../../config/config.json"
 import { getNamedLogger } from "../lib/log"
 import { add, check } from "../lib/store"
 import SpiderJob from "./SpiderJob"
 import { MovieMeta } from "../types"
+import getConfig from "../lib/config"
 
 // let cluster: Cluster<string | MovieMeta, any>
 
 const log = getNamedLogger("dytt")
 
 const spider = new SpiderJob()
+const config = getConfig()
 
 /**
  * 在网页内匹配评分
