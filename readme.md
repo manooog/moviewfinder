@@ -6,42 +6,42 @@
     "entey": "https://www.dydytt.net/index2.htm"
   },
   "aria2": {
-    "rpc": "http://192.168.3.2:6800/jsonrpc",
+    "rpc": "http://<your-aria2-ip:port>/jsonrpc",
     "destDir": "/mnt/nas/video",
     "token": "your token"
   }
 }
 ```
 
-
-## Timeline
-``` mermaid
-graph LR;
-
-a ---> b;
-
-```
-
-
 ## 部署
 
 docker-compose
 
 ```
-  server-scripts:
-    image: server-scripts
+version: '3.5'
+
+services:
+  moviewfinder:
+    image: moviewfinder
+    container_name: moviewfinder
     cap_add:
       - SYS_ADMIN
     environment:
-      - START_ON_ENTER: true
+      - START_ON_ENTER=true
     volumes:
-      - ./server-scripts/config:/home/pptruser/app/config
+      - ./moviewfinder:/home/pptruser/app/config
 ```
 
 docker
 
 ```
-docker run -e PGID=1000 -e PUID=1000 -e START_ON_ENTER=true server-scripts
+docker run \
+-d \
+--cap-add=SYS_ADMIN \
+--name=moviewfinder \
+-e START_ON_ENTER=true \
+-v=./moviewfinder:/home/pptruser/app/config \
+moviewfinder
 ```
 
 ## 备选电影网站

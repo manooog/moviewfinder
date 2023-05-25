@@ -4,4 +4,7 @@ out
 config/*
 *.tar.gz
 
+demo/moviewfinder/*
+
+!demo/moviewfinder/config.json
 !.gitkeep

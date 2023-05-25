@@ -16,11 +16,11 @@ const logger = winston.createLogger({
     // - Write all logs with importance level of `info` or less to `combined.log`
     //
     new winston.transports.File({
-      filename: resolve(__dirname, "../config/log/error.log"),
+      filename: resolve(process.cwd(), "config/log/error.log"),
       level: "error",
     }),
     new winston.transports.File({
-      filename: resolve(__dirname, "../config/log/combined.log"),
+      filename: resolve(process.cwd(), "config/log/combined.log"),
     }),
   ],
 })
@@ -29,10 +29,6 @@ function getNamedLogger(name: string) {
   return logger.child({ moduleName: name })
 }
 
-//
-// If we're not in production then log to the `console` with the format:
-// `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
-//
 if (process.env.NODE_ENV !== "production") {
   logger.add(
     new winston.transports.Console({

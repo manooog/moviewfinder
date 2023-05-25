@@ -1,0 +1,10 @@
+{
+  "dytt": {
+    "entey": "https://www.dydytt.net/index2.htm"
+  },
+  "aria2": {
+    "rpc": "http://<your-aria2-ip:port>/jsonrpc",
+    "destDir": "/mnt/nas/video",
+    "token": "your token"
+  }
+}

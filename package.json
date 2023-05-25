@@ -1,9 +1,10 @@
 {
-  "name": "server-scripts",
+  "name": "moviewfinder",
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "build": "tsc"
   },
   "keywords": [
     "movie",

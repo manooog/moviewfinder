@@ -1,0 +1,12 @@
+version: '3.5'
+
+services:
+  moviewfinder:
+    build: ../
+    container_name: moviewfinder
+    cap_add:
+      - SYS_ADMIN
+    environment:
+      - START_ON_ENTER=true
+    volumes:
+      - ./moviewfinder:/home/pptruser/app/config

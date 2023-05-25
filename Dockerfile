@@ -42,6 +42,7 @@ USER node
 #这里是为了将容器内已存在的chromium配置进行声明
 ENV PUPPETEER_CACHE_DIR=/home/pptruser/.cache/puppeteer
 ENV PUPPETEER_CHROMIUM_REVISION=1056772
+ENV NODE_ENV=production
 
 # 本地打包好
 # copy 过去后的文件属于 root 用户，得改成当前
