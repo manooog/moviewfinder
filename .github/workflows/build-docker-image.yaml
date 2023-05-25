@@ -8,7 +8,7 @@ on:
 jobs:
   buildx:
     runs-on: ubuntu-latest
-    if: ${{ startsWith(github.ref_name, 'main') }}
+    if: ${{ startsWith(github.ref_name, 'master') }}
     permissions:
       contents: read
       packages: write
