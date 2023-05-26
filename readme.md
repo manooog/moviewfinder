@@ -64,10 +64,10 @@ docker run \
 --name=moviewfinder \
 -e START_ON_ENTER=true \
 -v=./moviewfinder:/home/pptruser/app/config \
-moviewfinder
+ghcr.io/manooog/moviewfinder:latest
 ```
 
 ## 备选电影网站
 
-https://www.loldytt.com/Juqingdianying/SDDBW/
-https://www.bt-tt.com/html/6/27763.html
+- https://www.loldytt.com/Juqingdianying/SDDBW/
+- https://www.bt-tt.com/html/6/27763.html
