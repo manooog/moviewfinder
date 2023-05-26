@@ -45,7 +45,7 @@ version: '3.5'
 
 services:
   moviewfinder:
-    image: moviewfinder
+    image: ghcr.io/manooog/moviewfinder:latest
     container_name: moviewfinder
     cap_add:
       - SYS_ADMIN
