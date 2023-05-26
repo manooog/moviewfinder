@@ -9,4 +9,4 @@ services:
     environment:
       - START_ON_ENTER=true
     volumes:
-      - ./moviewfinder:/home/pptruser/app/config
+      - ./moviewfinder:/home/node/app/config

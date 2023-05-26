@@ -52,7 +52,7 @@ services:
     environment:
       - START_ON_ENTER=true
     volumes:
-      - ./moviewfinder:/home/pptruser/app/config
+      - ./moviewfinder:/home/node/app/config
 ```
 
 docker
@@ -63,9 +63,11 @@ docker run \
 --cap-add=SYS_ADMIN \
 --name=moviewfinder \
 -e START_ON_ENTER=true \
--v=./moviewfinder:/home/pptruser/app/config \
+-v=./moviewfinder:/home/node/app/config \
 ghcr.io/manooog/moviewfinder:latest
 ```
+
+注意，docker@v20 版本不能识别`-v=./moviewfinder:/home/node/app/config`这个配置，需要将`./moviewfinder`改为绝对路径。
 
 ## 备选电影网站
 
