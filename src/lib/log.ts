@@ -29,16 +29,14 @@ function getNamedLogger(name: string) {
   return logger.child({ moduleName: name })
 }
 
-if (process.env.NODE_ENV !== "production") {
-  logger.add(
-    new winston.transports.Console({
-      format: winston.format.printf(
-        ({ level, message, timestamp, moduleName = "default" }) => {
-          return `[${timestamp} ${moduleName}] ${level} ${message}`
-        }
-      ),
-    })
-  )
-}
+logger.add(
+  new winston.transports.Console({
+    format: winston.format.printf(
+      ({ level, message, timestamp, moduleName = "default" }) => {
+        return `[${timestamp} ${moduleName}] ${level} ${message}`
+      }
+    ),
+  })
+)
 
 export { logger, getNamedLogger }

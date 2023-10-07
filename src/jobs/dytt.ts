@@ -97,10 +97,9 @@ async function startInEntry() {
 
   try {
     const [executeTask] = await spider.batch(async ({ page, data: url }) => {
-      await page.goto(url as string, {
-        // 不一定生效
-        waitUntil: "domcontentloaded",
-      })
+      await page.goto(url as string)
+
+      await page.waitForSelector(".co_content8")
 
       const filterdMovies = await page.$eval(".co_content8", (dom) => {
         const aLinks = dom.querySelectorAll("a")
