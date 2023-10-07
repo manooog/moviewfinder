@@ -44,11 +44,12 @@ FROM puppeteer
 
 ENV TZ="Asia/Shanghai"
 
+USER node
+
 WORKDIR /home/node/app
 
 # RUN apt-get update && apt-get install -y vim
 
-USER node
 
 ENV NODE_ENV=production
 
