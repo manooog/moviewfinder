@@ -1,29 +1,31 @@
 # 作为存储依赖的容器
 FROM node:16-bullseye-slim as pre
 
-WORKDIR /app
-
 # 安装pnpm
 RUN apt-get update && apt-get install -y curl
-RUN curl -f https://get.pnpm.io/v6.16.js | node - add --global pnpm
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
+FROM pre as deps
+
 COPY pnpm-lock.yaml package.json .npmrc ./
-RUN pnpm fetch
+RUN  \
+  curl -f https://get.pnpm.io/v6.16.js | node - add --global pnpm \
+  pnpm fetch
 
 # 构建容器
-FROM pre as build
+FROM deps as build
+
+WORKDIR /app
 
 COPY . .
 
-RUN pnpm i
-
-# /app/out
-RUN pnpm build
-
-# 移除测试环境的依赖，减少体积
-RUN pnpm prune --prod
+RUN \
+  pnpm i \
+  # /app/dist
+  pnpm build \
+  # 移除测试环境的依赖，减少体积
+  pnpm prune --prod
 
 FROM pre as puppeteer
 
@@ -32,7 +34,12 @@ RUN \
   fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-khmeros fonts-kacst fonts-freefont-ttf libxss1 \
   chromium -y --no-install-recommends
 
-RUN rm -rf /var/lib/apt/lists/*
+# 清理apt 安装缓存
+RUN \
+  apt-get clean autoclean \
+  apt-get autoremove --yes
+
+RUN rm -rf /var/lib/{apt,dpkg,cache,log}/*
 
 # Tell Puppeteer to skip installing Chrome. We'll be using the installed package.
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
@@ -56,7 +63,7 @@ ENV NODE_ENV=production
 # 本地打包好
 # https://stackoverflow.com/questions/44766665/how-do-i-docker-copy-as-non-root
 COPY --chown=node:node pnpm-lock.yaml package.json ./
-COPY --from=build --chown=node:node /app/out/ ./
+COPY --from=build --chown=node:node /app/dist/ ./
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 
 CMD ["node", "index.js"]

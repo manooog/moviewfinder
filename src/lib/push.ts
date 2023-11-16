@@ -25,6 +25,7 @@ function getDownlink(meta: MovieMeta) {
 }
 
 export async function startDownload() {
+  logger.debug('开始下载任务')
   const content = await readStore()
   // 过滤出需要下载的资源
   const newerList = content.filter(
@@ -39,11 +40,16 @@ export async function startDownload() {
     if (res) {
       // 记录
       successList = successList.concat(newerList.map((it) => it.title))
-      logger.notice(`push success ${successList.join("、")}`)
+      logger.notice(`推送成功 ${successList.join("、")}`)
     }
+  } else {
+    logger.notice('没有新的内容')
   }
+}
 
-  setTimeout(() => {
+export const intervalCheck = async () => {
+  await startDownload()
+  setInterval(() => {
     startDownload()
   }, 1 * 60 * 1000)
 }

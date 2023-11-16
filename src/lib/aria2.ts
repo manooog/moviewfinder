@@ -1,9 +1,10 @@
 import fetch from "node-fetch"
 import { v4 } from "uuid"
-import { logger as log } from "./log"
+import { getNamedLogger } from "./log"
 import getConfig from "./config"
 
 const config = getConfig()
+const log = getNamedLogger('aria2')
 
 /**
  * 下载
@@ -30,11 +31,11 @@ export async function addDownload(urls: string[]) {
     if (res.status === 200) {
       return true
     } else {
-      log.error(`aria2 error: ${res.status} ${await res.text()}`)
+      log.error(`推送失败 ${res.status} ${await res.text()}`)
       return false
     }
   } catch (error: any) {
-    log.error(error?.message)
+    log.error(`请求失败 ${error?.message}`)
     return false
   }
 }

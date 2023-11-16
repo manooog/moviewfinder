@@ -1,3 +1,5 @@
+import { Dayjs } from "dayjs";
+
 export type MovieMeta = {
   title: string
   href: string

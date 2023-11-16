@@ -17,6 +17,14 @@ export async function setPageForCrawle(page: Page) {
   })
 }
 
+export const initCluster = async () => {
+  return await Cluster.launch({
+    concurrency: Cluster.CONCURRENCY_PAGE,
+    maxConcurrency: 5,
+    retryLimit: 5,
+  })
+}
+
 export function timer(label: string) {
   const init = +new Date()
   let count = 0
@@ -29,38 +37,23 @@ export function timer(label: string) {
 
 type Options = {
   setPageMethod?: any
+  cluster: Cluster
 }
 
 export default class SpiderJob {
-  constructor(options: Options = {}) {
+  constructor(options: Options) {
     this.options = {
-      ...options,
       setPageMethod: setPageForCrawle,
+      ...options,
     }
   }
 
   private options: Options
-  private cluster: Cluster | null = null
-
-  private init = async () => {
-    this.cluster = await Cluster.launch({
-      concurrency: Cluster.CONCURRENCY_PAGE,
-      maxConcurrency: 5,
-      retryLimit: 5,
-    })
-  }
-
-  private getCluster = async () => {
-    if (!this.cluster) {
-      await this.init()
-    }
-    return this.cluster as Cluster
-  }
 
   batch = async <T = any, D = any>(
     task: TaskFunction<T, D>
   ): Promise<[(param?: T) => Promise<D>, any]> => {
-    const cluster = await this.getCluster()
+    const { cluster } = this.options
     cluster.task(async (data) => {
       await this.options?.setPageMethod(data.page)
       return await task(data)
@@ -85,11 +78,8 @@ export default class SpiderJob {
   }
 
   close = async () => {
-    if (!this.cluster) return
-
-    await this.cluster.idle()
-    await this.cluster.close()
-
-    this.cluster = null
+    const { cluster } = this.options
+    await cluster.idle()
+    await cluster.close()
   }
 }

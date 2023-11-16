@@ -5,9 +5,8 @@
       "type": "node",
       "request": "launch",
       "name": "Launch Program",
-      "program": "${file}",
-      "preLaunchTask": "tsc: build - tsconfig.json",
-      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "program": "${workspaceFolder}/dist/index.js",
+      "preLaunchTask": "npm: build",
       "env": {
         "IS_VSCODE_DEBUGGER": "true",
         "START_ON_ENTER": "true"

@@ -1,10 +1,10 @@
-import SpiderJob, { timer } from "./SpiderJob"
+import SpiderJob, { initCluster, timer } from "./SpiderJob"
 import { getNamedLogger } from "../lib/log"
 import { add, check } from "../lib/store"
 
 // 创建任务
-const spider = new SpiderJob()
-const logger = getNamedLogger("douban_hot")
+let spider: SpiderJob
+const log = getNamedLogger("douban")
 
 type doubanMeta = { name: string; point: string; link: string }
 
@@ -12,57 +12,42 @@ async function doubanHot() {
   // 爬
   const [getDoubanHot] = await spider.batch(async ({ page }) => {
     // 打开豆瓣电影首页
-    await page.goto("https://movie.douban.com/", {
-      waitUntil: "domcontentloaded",
-    })
+    await page.goto("https://movie.douban.com/")
 
     // douban是前端渲染的动态网页
     await page.waitForSelector(".cover-wp")
 
     // 默认情况下，首页显示的就是热门电影
+    // TODO 第一页还不够，改成整体抽取出来
     return await page.$$eval(
       "div.gaia-movie div.slide-container > div.slide-wrapper > div[data-index='0'] > a",
       (el) => {
-        return el.map((it) => {
-          /**
-         * [
-              ' 千寻小姐 7.9',
-              'https://movie.douban.com/subject/35791966/?tag=%E7%83%AD%E9%97%A8&from=gaia'
-            ]
-         */
-          return [it.querySelector("p")?.innerText, it.href]
+        let hots: doubanMeta[] = []
+        el.forEach((it) => {
+          const [name, point] = it.querySelector("p")?.innerText?.split(" ") || []
+          if (+point >= 7 && name) {
+            hots.push({
+              name,
+              point,
+              link: it.href
+            })
+          }
         })
+        return hots
       }
     )
   })
+
+
   // 执行
   const result = await getDoubanHot()
 
-  let hots: doubanMeta[] = []
 
-  if (Array.isArray(result)) {
-    hots = result.reduce((pre, cur) => {
-      if (
-        !pre.find((it) => it.link === cur[1]) &&
-        cur.every((it) => it !== undefined)
-      ) {
-        const [name, point] = cur[0]?.split(" ") || []
-        if (+point > 7) {
-          pre.push({ name, point, link: cur[1] || "" })
-        }
-      }
-
-      return pre
-    }, [] as doubanMeta[])
-  }
-
-  logger.notice(
-    `total*${hots.length} ${hots
-      .map((it) => `${it.name}@${it.point}`)
-      .join("、")}`
+  log.notice(
+    `豆瓣超7分电影找到 ${result.length} 部`
   )
 
-  return hots
+  return result
 }
 
 /**
@@ -80,9 +65,10 @@ async function search(hots: doubanMeta[]) {
       // 使用电影名发起搜索
       const t = timer(`${movie} search`)
       // 打开dy-tt 首页
-      await page.goto("https://www.bt-tt.com/", {
-        waitUntil: "domcontentloaded",
-      })
+      await page.goto("https://www.bt-tt.com/")
+
+
+      await page.waitForSelector('input#search-keyword')
 
       // 输入搜索关键字
       await page.$eval(
@@ -92,7 +78,7 @@ async function search(hots: doubanMeta[]) {
         },
         movie
       )
-      // click 和 waitFor 写到一起，可以明显提高成功率!!!
+
       await Promise.all([
         // 302跳转
         page.waitForNavigation(),
@@ -100,7 +86,7 @@ async function search(hots: doubanMeta[]) {
         page.click("#pc_so > form > input.sub"),
       ])
 
-      logger.info(t())
+      log.info(t())
 
       // 选第一个
       // TODO 搜索结果可能并不是自己想要的
@@ -116,22 +102,22 @@ async function search(hots: doubanMeta[]) {
         .catch((_) => {
           // 这里出现错误，可能是由于网站限制了某些搜索字段导致
           // -> 尝试使用部分关键字进行再次搜索
-          logger.error(`${movie} 查询失败`)
+          log.error(`${movie} 查询失败`)
           return []
         })
 
       if (!href && movie.length > 1) {
         // 搜索错误，尝试减少关键字继续搜索
-        logger.info(`尝试减少关键字继续搜索`)
+        log.info(`尝试减少关键字继续搜索`)
         return searchEnter({ original, current: movie.slice(0, -1) })
       }
 
       if (!mName.startsWith(original)) {
-        logger.info(`${original} 无匹配 ${original} -> ${mName}`)
+        log.info(`${original} 无匹配 ${original} -> ${mName}`)
         return
       }
 
-      logger.info(`${original} 最佳匹配 ${movie} -> ${mName} ${href}`)
+      log.info(`${original} 最佳匹配 ${movie} -> ${mName} ${href}`)
 
       await page.goto(href, { waitUntil: "domcontentloaded" })
 
@@ -144,7 +130,7 @@ async function search(hots: doubanMeta[]) {
         }
       })
 
-      logger.info(`${original} download ${downloadLink}`)
+      log.info(`${original} download ${downloadLink}`)
 
       if (downloadLink && !(await check(original))) {
         // 写入
@@ -161,35 +147,33 @@ async function search(hots: doubanMeta[]) {
   await Promise.all(hots.map(({ name }) => searchEnter({ original: name })))
 }
 
-export async function doubanJobEntry() {
-  try {
-    logger.notice("start")
-    // step 1
-    let hots = await doubanHot()
-    if (hots.length !== 0) {
-      // step 2 过滤
-      hots = hots.filter(async (it) => await check(it.name))
-      for (let index = hots.length - 1; index >= 0; index--) {
-        const { name } = hots[index]
-        if (await check(name)) {
-          // 已存在，过滤掉
-          hots.splice(index, 1)
-        }
-      }
 
-      logger.notice(`new*${hots.length}`)
-      // step 3
-      await search(hots)
+
+async function start() {
+  // 初始化 cluster
+  const cluster = await initCluster()
+  spider = new SpiderJob({ cluster })
+
+  try {
+    log.notice("任务开始")
+    // 找出页面中的热门电影
+    let hots = await doubanHot()
+
+    if (hots.length > 0) {
+      // step 2 过滤出新的电影
+      hots = hots.filter(async (it) => !await check(it.name))
+      log.notice(`新电影有 ${hots.length} 部`)
+
+      if (hots.length > 0) {
+        // step 3
+        await search(hots)
+      }
     }
-  } catch (error) {
-    logger.error("爬取错误，下次重试", error)
+  } catch (err: any) {
+    log.error(err.message)
   } finally {
-    logger.notice("complete")
-    // 结束任务，必须手动结束否则程序不会退出
-    await spider.close()
+    spider.close()
   }
 }
 
-if (process.env.IS_VSCODE_DEBUGGER) {
-  doubanJobEntry()
-}
+export default start

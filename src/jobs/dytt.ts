@@ -4,15 +4,13 @@
 
 import { getNamedLogger } from "../lib/log"
 import { add, check } from "../lib/store"
-import SpiderJob from "./SpiderJob"
+import SpiderJob, { initCluster } from "./SpiderJob"
 import { MovieMeta } from "../types"
 import getConfig from "../lib/config"
 
-// let cluster: Cluster<string | MovieMeta, any>
-
 const log = getNamedLogger("dytt")
 
-const spider = new SpiderJob()
+let spider: SpiderJob
 const config = getConfig()
 
 /**
@@ -52,9 +50,7 @@ async function findSomething(movies: MovieMeta[]) {
   // 打开电影内页
   if (newerMovies.length > 0) {
     log.notice(
-      `new*${newerMovies.length} ${newerMovies
-        .map((it) => it.title)
-        .join("、")}`
+      `新电影有 ${newerMovies.length} 部`
     )
     const [executeMovie] = await spider.batch(async ({ page, data }) => {
       await page.goto((data as MovieMeta).href, {
@@ -64,6 +60,7 @@ async function findSomething(movies: MovieMeta[]) {
 
       const [needDownload, rs] = getCount(content)
 
+      let downloadMeta
       if (needDownload) {
         // 超过 7分才进行下载
 
@@ -76,75 +73,82 @@ async function findSomething(movies: MovieMeta[]) {
         if (downloadURL) {
           const downloadURLStr = downloadURL[0]
           // 将链接发给 aria2
-          const downloadMeta = {
+          downloadMeta = {
             ...(data as MovieMeta),
             download: [downloadURLStr],
           }
 
-          await add(downloadMeta)
+
         }
       }
 
-      // 磁力链接
+      return downloadMeta
+
     })
     // 批量打开
-    await newerMovies.map((movie) => executeMovie(movie))
+    newerMovies.map(async (movie) => {
+      const meta = await executeMovie(movie)
+      meta && await add(meta)
+    })
   }
 }
 
 async function startInEntry() {
-  log.notice("start")
+  log.notice("任务开始")
+  const [executeTask] = await spider.batch(async ({ page, data: url }) => {
+    await page.goto(url as string)
 
-  try {
-    const [executeTask] = await spider.batch(async ({ page, data: url }) => {
-      await page.goto(url as string)
+    await page.waitForSelector(".co_content8")
 
-      await page.waitForSelector(".co_content8")
+    const filterdMovies = await page.$eval(".co_content8", (dom) => {
+      const aLinks = dom.querySelectorAll("a")
+      let movies: MovieMeta[] = []
+      const thisIsNotMovie = ["最新", "手机浏览"]
+      for (const item of Array.from(aLinks)) {
+        if (
+          !~thisIsNotMovie.findIndex((pre) => item.innerHTML.includes(pre))
+        ) {
+          // 确定是电影链接
+          const m = item.innerHTML.match(/《(.*?)》/)
 
-      const filterdMovies = await page.$eval(".co_content8", (dom) => {
-        const aLinks = dom.querySelectorAll("a")
-        let movies: MovieMeta[] = []
-        const thisIsNotMovie = ["最新", "手机浏览"]
-        for (const item of Array.from(aLinks)) {
-          if (
-            !~thisIsNotMovie.findIndex((pre) => item.innerHTML.includes(pre))
-          ) {
-            // 确定是电影链接
-            const m = item.innerHTML.match(/《(.*?)》/)
+          if (!m) continue
 
-            if (!m) continue
-
-            movies.push({
-              // 豆瓣电影名
-              title: m[1],
-              href: item.href,
-              download: [],
-            })
-          }
+          movies.push({
+            // 豆瓣电影名
+            title: m[1],
+            href: item.href,
+            download: [],
+          })
         }
-        return movies
-      })
-
-      log.notice(
-        `find*${filterdMovies.length} ${filterdMovies
-          .map((it) => it.title)
-          .join("、")}`
-      )
-
-      await findSomething(filterdMovies)
+      }
+      return movies
     })
 
-    await executeTask(config.dytt.entey)
-  } catch (error) {
-    log.error(`job error ${error}`)
+    log.notice(
+      `共发现 ${filterdMovies.length} 部电影`
+    )
+
+    return filterdMovies
+  })
+
+  return await executeTask(config.dytt.entey)
+}
+
+async function start() {
+  // 初始化 cluster
+  const cluster = await initCluster()
+  spider = new SpiderJob({ cluster })
+
+  try {
+    const movies = await startInEntry()
+    if (movies.length > 0) {
+      await findSomething(movies)
+    }
+  } catch (err: any) {
+    log.error(err.message)
   } finally {
-    await spider.close()
-    log.notice(`complete`)
+    spider.close()
   }
 }
 
-if (process.env.IS_VSCODE_DEBUGGER) {
-  startInEntry()
-}
-
-export default startInEntry
+export default start

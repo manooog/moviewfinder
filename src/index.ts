@@ -1,13 +1,13 @@
 import { CronJob } from "cron"
 import process from "node:process"
-import { doubanJobEntry } from "./jobs/douban"
-import dyttJobEntry from "./jobs/dytt"
-import { logger } from "./lib/log"
-import { startDownload } from "./lib/push"
+import doubanJobEntry from "~/jobs/douban"
+import dyttJobEntry from "~/jobs/dytt"
+import { logger } from "~/lib/log"
+import { intervalCheck } from "~/lib/push"
 
-logger.notice("script start")
+logger.notice("moviewfinder start")
 
-startDownload()
+intervalCheck()
 
 function startJobs() {
   dyttJobEntry()
